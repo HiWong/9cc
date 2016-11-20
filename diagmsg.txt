@@ -1,58 +1,447 @@
 # diagnostic messages
 
-name = err_incompat_conv
-msg = "incompatible type conversion from '%T' to '%T'"
+###### category: parser ######
 
-name = err_redefinition
-msg = "redefinition of '%s', previous definition at %S"
+name: err_invalid_postfix_expr
+msg: "invalid postfix expression at '%t'"
 
-name = err_conflict_types
-msg = "conflicting types for '%s', previous at %S"
+name: err_expect_assign_expr
+msg: "expect assignment expression"
 
-name = err_duplicate_member
-msg = "duplicate member '%s', previous declaration at %S"
+name: err_missing_statement
+msg: "missing statement before '%t'"
 
-name = err_type
-msg = "expect type '%s', not '%T'"
+name: err_case_not_in_switch
+msg: "'case' statement not in switch statement"
 
-name = err_inline
-msg = "'inline' can only appear on functions"
+name: err_multiple_default
+msg: "multiple default labels in on switch, previous case defined here: %S"
 
-name  = err_array_of_func
-msg = "array of function is invalid"
+name: err_default_not_in_switch
+msg: "'default' statement not in switch statement"
 
-name = err_func_ret_array
-msg = "function cannot return array type '%T'"
+name: err_redefinition_of_label
+msg: "redefinition of label '%s', previous label defined here: %S"
 
-name = err_func_ret_func
-msg = "function cannot return function type '%T'"
+name: err_break_not_in_loop_or_switch
+msg: "'break' statement not in loop or switch statement"
 
-name = err_incomplete_var
-msg = "variable '%s' has incomplete type '%T'"
+name: err_continue_not_in_loop
+msg: "'continue' statement not in loop statement"
 
-name = err_incomplete_array_element
-msg = "array has incomplete element type '%T'"
+name: err_params_without_types
+msg: "a parameter list without types is only allowed in a function definition"
 
-name = err_init_empty_record
-msg = "initializer for aggregate with no elements requires explicit braces"
+name: err_duplicate_sclass
+msg: "duplicate storage class '%t'"
 
-name = err_init_override
-msg = "initializer overrides prior initialization"
+name: err_sclass_not_allowed
+msg: "type name does not allow storage class to be specified"
 
-name = err_bop_operands
-msg = "invalid operands to binary expression ('%T' and '%T')"
+name: err_duplicate_decl_spec
+msg: "duplicate '%t' declaraion specifier"
 
-name = err_incompat_compare
-msg = "comparision of incompatible types ('%T' and '%T')"
+name: err_func_spec_not_allowed
+msg: "function specifier not allowed"
 
-name = err_ptr_int_compare
-msg = "comparision of '%s' and '%s' is illegal in ISO C"
+name: err_duplicate_ci_spec
+msg: "duplicate _Complex/_Imaginary specifier '%t'"
 
-name = err_incompat_ptrs
-msg = "'%T' and '%T' are not pointers to compatible types"
+name: err_duplicate_sign_spec
+msg: "duplicate signed/unsigned specifier '%t'"
 
-name = err_incompat_init
-msg = "initializing '%T' with an expression of incompatible type '%T'"
+name: err_duplicate_type_spec
+msg: "duplicate type specifier '%t'"
 
-name = err_initializer_not_const
-msg = "initializer is not a compile-time constant"
+name: err_missing_type_spec
+msg: "missing type specifier"
+
+name: err_invalid_llong_spec
+msg: "%s %s %s is invalid"
+
+name: err_invalid_size_spec
+msg: "%s %s is invalid"
+
+name: err_type_cant_be_sign
+msg: "'%s' cannot be signed or unsigned"
+
+name: err_type_cant_be_ci
+msg: "'%s' cannot be %s"
+
+name: err_single_ellipsis_param
+msg: "ISO C requires a named parameter before '...'"
+
+name: err_expect_param_dector
+msg: "expect parameter declarator at '%t'"
+
+name: err_duplicate_type_qual
+msg: "duplicate type qualifier '%s'"
+
+name: err_expect_abs_dector
+msg: "expect '(', '[' or '*'"
+
+name: err_expect_dector
+msg: "expect identifier or '('"
+
+name: err_expect_identifier
+msg: "expect identifier"
+
+name: err_expect_tag_decl
+msg: "expected identifier or '{'"
+
+name: err_tag_type_not_match
+msg: "use of '%s' with tag type that does not match previous declaration '%T' at %S"
+
+name: err_cant_init_param
+msg: "C does not support default arguments"
+
+name: err_cant_init_typedef
+msg: "illegal initializer (only variable can be initialized)"
+
+name: err_invalid_token_in_decl
+msg: "invalid token '%t' in declaration"
+
+name: err_expect_decl
+msg: "expect declaration"
+
+
+###### category: semantic ######
+
+name: err_incompat_conv
+msg: "incompatible type conversion from '%T' to '%T'"
+
+name: err_redefinition
+msg: "redefinition of '%s', previous definition at %S"
+
+name: err_conflict_types
+msg: "conflicting types for '%s', previous at %S"
+
+name: err_duplicate_member
+msg: "duplicate member '%s', previous declaration at %S"
+
+name: err_type
+msg: "expect type '%s', not '%T'"
+
+name: err_inline
+msg: "'inline' can only appear on functions"
+
+name : err_array_of_func
+msg: "array of function is invalid"
+
+name: err_func_ret_array
+msg: "function cannot return array type '%T'"
+
+name: err_func_ret_func
+msg: "function cannot return function type '%T'"
+
+name: err_incomplete_var
+msg: "variable '%s' has incomplete type '%T'"
+
+name: err_incomplete_array_element
+msg: "array has incomplete element type '%T'"
+
+name: err_init_empty_record
+msg: "initializer for aggregate with no elements requires explicit braces"
+
+name: err_init_override
+msg: "initializer overrides prior initialization"
+
+name: err_bop_operands
+msg: "invalid operands to binary expression ('%T' and '%T')"
+
+name: err_incompat_compare
+msg: "comparision of incompatible types ('%T' and '%T')"
+
+name: err_ptr_int_compare
+msg: "comparision of '%s' and '%s' is illegal in ISO C"
+
+name: err_incompat_ptrs
+msg: "'%T' and '%T' are not pointers to compatible types"
+
+name: err_incompat_init
+msg: "initializing '%T' with an expression of incompatible type '%T'"
+
+name: err_initializer_not_const
+msg: "initializer is not a compile-time constant"
+
+name: err_unclosed_balance
+msg: "unclosed %s, missing '%s'"
+
+name: err_incomplete_type_definition
+msg: "incomplete definition of type '%T'"
+
+name: err_field_not_found
+msg: "'%T' has no field named '%s'"
+
+name: err_int_literal_overflow
+msg: "integer constant overflow: %s"
+
+name: err_invalid_multibyte_sequence
+msg: "invalid multibyte sequence: %s"
+
+name: err_expr_not_assignable
+msg: "expression is not assignable (not an lvalue)"
+
+name: err_array_not_assignable
+msg: "array type '%T' is not assignable"
+
+name: err_const_not_assignable
+msg: "read-only variable is not assignable"
+
+name: err_ptr_cant_incr
+msg: "increment/decrement of invalid type '%T' (pointer to unknown size)"
+
+name: err_too_few_args
+msg: "too few arguments to function call"
+
+name: err_too_few_args_varg
+msg: "too few arguments to function call, expected at least %d, have %d"
+
+name: err_too_few_args_fixed
+msg: "too few arguments to function call, expected %d, have %d"
+
+name: err_too_many_args
+msg: "too many arguments to function call, expected %d, have %d"
+
+name: err_implicit_decl
+msg: "implicit declaration of '%s'"
+
+name: err_types_mismatch_in_condexpr
+msg: "type mismatch in conditional expression: '%T' and '%T'"
+
+name: err_incompat_types_in_condexpr
+msg: "imcompatible types '%T' and '%T' in conditional expression"
+
+name: err_take_addr_of_non_lvalue
+msg: "lvalue required as unary '&' operand"
+
+name: err_take_addr_of_bit_field
+msg: "address of bitfield requested"
+
+name: err_take_addr_of_register
+msg: "address of register variable requested"
+
+name: err_sizeof_func_or_void
+msg: "'sizeof' to a '%T' type is invalid"
+
+name: err_sizeof_incomplete_type
+msg: "'sizeof' to an incomplete type '%T' is invalid"
+
+name: err_sizeof_bit_field
+msg: "'sizeof' to a bitfield is invalid"
+
+name: err_subscript_of_func_ptr
+msg: "subscript of pointer to function type '%T'"
+
+name: err_illegal_subscript_value_type
+msg: "subscripted value is not an array or pointer"
+
+name: err_subscript_index_not_int
+msg: "array subscript is not an integer"
+
+name: err_call_func_with_incomplete_ret_type
+msg: "calling function with incomplete return type '%T'"
+
+name: err_expect_ptr_to_record
+msg: "pointer to struct/union type expected, not type '%T'"
+
+name: err_use_of_out_of_scope_decl
+msg: "use of out-of-scope declaration of '%s', previous declaration is here: %S"
+
+name: err_use_not_match
+msg: "use of '%s' does not match previous declaration at: %S"
+
+name: err_use_of_undeclared_identifier
+msg: "use of undeclared identifier '%s'"
+
+name: err_expr_not_int_constant
+msg: "expression is not an integer constant expression"
+
+name: err_expr_not_compile_time_constant
+msg: "expression is not a compile-time constant"
+
+name: err_using_assign_as_cond_without_paren
+msg: "using the result of an assignment as a condition without parentheses"
+
+name: err_require_int_in_switch_expr
+msg: "statement requires expression of integer type ('%T' invalid)"
+
+name: err_void_func_ret_a_value
+msg: "void function should not return a value"
+
+name: err_func_ret_incompat_type
+msg: "returning '%T' from function with incompatible result type '%T'"
+
+name: err_nonvoid_func_no_ret_value
+msg: "non-void function should return a value"
+
+name: err_use_of_undeclared_label
+msg: "use of undeclared label '%s'"
+
+name: err_unused_variable
+msg: "unused variable '%s'"
+
+name: err_unused_function
+msg: "unused function '%s'"
+
+name: err_init_string_too_long
+msg: "initializer-string for char array is too long"
+
+name: err_cant_init_array_of_type
+msg: "cannot initialize array of type '%T' with array of type '%T'"
+
+name: err_illegal_array_initialzier
+msg: "array initializer must be an initializer list or string literal"
+
+name: err_init_extern_variable
+msg: "'extern' variable has an initializer"
+
+name: err_cant_init_extern_variable
+msg: "'extern' variable cannot have an initializer"
+
+name: err_type_cant_init
+msg: "'%s' cannot have an initializer"
+
+name: err_incomplete_designator
+msg: "%s designator of incomplete type '%T'"
+
+name: err_excess_init
+msg: "excess elements in %s initializer"
+
+name: err_init_incomplete_type
+msg: "initialize incomplete type '%T'"
+
+name: err_too_many_braces_in_init
+msg: "too many braces around scalar initializer"
+
+name: err_dismatch_designator_type
+msg: "%s designator cannot initialize non-%s type '%T'"
+
+name: err_array_designator_overflow
+msg: "array designator index [%ld] exceeds array bounds (%lu)"
+
+name: err_star_modifier_out_of_func_proto
+msg: "star modifier used outside of function prototype"
+
+name: err_qual_used_in_array_outside_func_proto
+msg: "type qualifier used in array declarator outside of function prototype"
+
+name: err_qual_used_in_non_outermost_array
+msg: "type qualifier used in non-outermost array type derivation"
+
+name: err_star_modifier_in_funcdef
+msg: "variable length array must be bound in function definition"
+
+name: err_bit_field_not_int
+msg: "bit-field '%s' has non-integral type '%T'"
+
+name: err_anonymous_bit_field_not_int
+msg: "anonymous bit-field has non-integral type '%T'"
+
+name: err_negative_bit_field_width
+msg: "bit-field '%s' has negative width '%d'"
+
+name: err_negative_anonymous_bit_field_width
+msg: "anonymous bit-field has negative width '%d'"
+
+name: err_named_bit_field_zero_with
+msg: "named bit-field '%s' has zero width"
+
+name: err_bit_field_width_overflow
+msg: "size of bit-field '%s' (%d bits) exceeds size of its type (%d bits)"
+
+name: err_anonymous_bit_field_width_overflow
+msg: "anonymous bit-field (%d bits) exceeds size of its type (%d bits)"
+
+name: err_field_has_invalid_type
+msg: "field has invalid type '%s'"
+
+name: err_field_has_incomplete_type
+msg: "field has incomplete type '%T'"
+
+name: err_single_flexible_array
+msg: "flexible array cannot be the only member"
+
+name: err_main_func_ret_type_invalid
+msg: "return type of 'main' is not 'int'"
+
+name: err_main_func_first_param_not_int
+msg: "first parameter of 'main' is not 'int'"
+
+name: err_main_func_23_param_not_ppchar
+msg: "%s parameter of 'main' is not 'char **'"
+
+name: err_main_func_params_count_invalid
+msg: "expect 0, 2 or 3 parameters for 'main', have %d"
+
+name: err_param_name_omitted
+msg: "parameter name omitted"
+
+name: err_named_param_not_found
+msg: "parameter named '%s' is missing"
+
+name: err_array_has_negative_size
+msg: "array has negative size"
+
+name: err_expect_constant_expr
+msg: "expect constant expression"
+
+name: err_array_size_not_int
+msg: "size of array has non-integer type '%T'"
+
+name: err_void_param_has_qual
+msg: "'void' as parameter must not have type qualifier"
+
+name: err_void_param_must_be_first_and_only
+msg: "'void' must be the first and only parameter if specified"
+
+name: err_declare_nothing
+msg: "declaration does not declare anything"
+
+name: err_empty_decl
+msg: "empty declaraion"
+
+name: err_qual_ignored_in_decl
+msg: "'%s' ignored on this declaration"
+
+name: err_decl_will_not_be_visible_outside
+msg: "declaration of '%T' will not be visible outside of this function"
+
+name: err_invalid_sclass
+msg: "invalid storage class specifier '%s'"
+
+name: err_invalid_sclass_in_func_dector
+msg: "invalid storage class specifier '%s' in function declarator"
+
+name: err_invalid_sclass_in_gobal
+msg: "illegal storage class on file-scoped variable"
+
+name: err_invalid_sclass_for_local_func_decl
+msg: "function declared in block scope cannot have '%s' storage class"
+
+name: err_static_decl_follows_non_static_decl
+msg: "static declaaration of '%s' follows non-static declaration"
+
+name: err_non_static_decl_follows_static_decl
+msg: "non-static declaration of '%s' follows static declaration"
+
+name: err_param_is_void
+msg: "argument may not have 'void' type"
+
+name: err_expect_func_body
+msg: "expect function body after function declarator"
+
+name: err_duplicate_case
+msg: "duplicate case value '%lld', previous case defined here: %S"
+
+
+###### category: ast ######
+
+name: err_expr_result_discard
+msg: "expression result not used"
+
+
+###### category: gen ######
+
+name: err_illegal_initializer
+msg: "illegal initializer for '%s'"

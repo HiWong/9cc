@@ -45,7 +45,7 @@ static struct tree *parse_compound_literal(struct type *ty)
 {
     struct source src = source;
     struct tree *inits = parse_initializer_list(ty);
-    
+
     return actions.cpliteral(ty, inits, src);
 }
 
@@ -70,7 +70,7 @@ static struct type *parse_cast_type(void)
 static struct tree *parse_primary_expr(void)
 {
     struct tree *ret = NULL;
- 
+
     switch (token->id) {
     case ID:
         ret = actions.id(token);
@@ -95,7 +95,7 @@ static struct tree *parse_primary_expr(void)
         } else {
             struct source src = source;
             struct tree *e;
-            
+
             gettok();
             e = parse_expr();
             match(')', skip_to_bracket);
@@ -103,7 +103,7 @@ static struct tree *parse_primary_expr(void)
         }
         break;
     default:
-        error("invalid postfix expression at '%t'", token);
+        error(err_invalid_postfix_expr, token);
         break;
     }
 
@@ -130,7 +130,7 @@ static struct tree **parse_argument_expr_list(void)
             gettok();
         }
     } else if (token_is_not(')')) {
-        error("expect assignment expression");
+        error(err_expect_assign_expr);
     }
 
     return ltoa(&l, FUNC);
@@ -230,7 +230,7 @@ static struct tree *parse_unary_expr(void)
 {
     int t = token->id;
     struct source src = source;
-    
+
     switch (t) {
     case INCR:
     case DECR:
@@ -355,7 +355,7 @@ static struct tree *parse_binary_expr(void)
         int op;
         struct source src;
     } stack[NUM_PRECS];
-    
+
     int sp;                     // stack pointer
 
     // pop stack[sp] and stack[sp-1]
@@ -367,13 +367,13 @@ static struct tree *parse_binary_expr(void)
                                        stack[sp].src);          \
         sp--;                                                   \
     } while (0)
-    
+
     // init stack
     stack[0].src = source;
     stack[0].expr = parse_cast_expr();
     stack[0].prec = PREC_NONE;
     sp = 0;
-    
+
     while (1) {
         int prec;
         int t;
@@ -439,7 +439,7 @@ static struct tree *parse_binary_expr(void)
  out:
     while (sp > 0)
         POP();
-    
+
     return stack[0].expr;
 #undef POP
 }
@@ -551,16 +551,16 @@ static void statement(int cnt, int brk, struct swtch *swtch);
    expression[opt] ';'
 */
 static void expr_stmt(void)
-{    
+{
     if (token_is(';')) {
         // do nothing
     } else if (first_expr(token)) {
         struct tree *e = parse_expr0();
         if (e) actions.gen(e);
     } else {
-        error("missing statement before '%t'", token);
+        error(err_missing_statement, token);
     }
-    
+
     expect(';');
 }
 
@@ -587,7 +587,7 @@ static void if_stmt(int lab, int cnt, int brk, struct swtch *swtch)
     match(')', skip_to_bracket);
 
     actions.branch(cond, 0, lab);
-    
+
     enter_scope();
     statement(cnt, brk, swtch);
     exit_scope();
@@ -671,7 +671,7 @@ static void for_stmt(int lab, struct swtch *swtch)
     struct tree *init = NULL;
     struct tree *cond = NULL;
     struct tree *ctrl = NULL;
-    
+
     enter_scope();
 
     expect(FOR);
@@ -711,7 +711,7 @@ static void for_stmt(int lab, struct swtch *swtch)
     actions.label(lab+3);
     actions.branch(cond, lab, 0);
     actions.label(lab+2);
-    
+
     exit_scope();
 }
 
@@ -746,7 +746,7 @@ static void switch_stmt(int lab, int cnt)
     statement(cnt, lab+1, swtch);
     actions.jump(lab+1);
     actions.label(lab);
-    
+
     // gen switch code
     for (struct cse *cs = swtch->cases; cs; cs = cs->link) {
         struct tree *e = actions.bop(EQL,
@@ -757,7 +757,7 @@ static void switch_stmt(int lab, int cnt)
 
     if (swtch->defalt)
         actions.jump(swtch->defalt->label);
-    
+
     actions.label(lab+1);
 }
 
@@ -788,7 +788,7 @@ static void case_stmt(int lab, int cnt, int brk, struct swtch *swtch)
 
         actions.label(lab);
     } else {
-        error_at(src, "'case' statement not in switch statement");
+        error_at(src, err_case_not_in_switch);
     }
 
     // always parse even if not in a switch statement
@@ -809,9 +809,7 @@ static void default_stmt(int lab, int cnt, int brk, struct swtch *swtch)
     // print before parsing statement
     if (swtch) {
         if (swtch->defalt)
-            error_at(src,
-                     "multiple default labels in one switch, previous case defined here: %S",
-                     swtch->defalt->src);
+            error_at(src, err_multiple_default, swtch->defalt->src);
 
         // new default case
         struct cse *defalt = NEWS0(struct cse, FUNC);
@@ -822,15 +820,15 @@ static void default_stmt(int lab, int cnt, int brk, struct swtch *swtch)
 
         actions.label(lab);
     } else {
-        error_at(src, "'default' statement not in switch statement");
+        error_at(src, err_default_not_in_switch);
     }
-    
+
     statement(cnt, brk, swtch);
 }
 
 /*
  labled-statement:
-   identifier ':' statement 
+   identifier ':' statement
 */
 static void label_stmt(int lab, int cnt, int brk, struct swtch *swtch)
 {
@@ -852,9 +850,7 @@ static void label_stmt(int lab, int cnt, int brk, struct swtch *swtch)
         } else if (!sym->defined) {
             sym->defined = true;
         } else {
-            error_at(src,
-                     "redefinition of label '%s', previous label defined here: %S",
-                     sym->name, sym->src);
+            error_at(src, err_redefinition_of_label, sym->name, sym->src);
         }
 
         actions.label(sym->x.label);
@@ -871,7 +867,7 @@ static void goto_stmt(int lab)
 {
     struct source src = source;
     const char *id = NULL;
-    
+
     expect(GOTO);
     if (token_is(ID))
         id = TOK_ID_STR(token);
@@ -900,14 +896,14 @@ static void goto_stmt(int lab)
 static void break_stmt(int brk)
 {
     struct source src = source;
-    
+
     expect(BREAK);
     expect(';');
 
     if (brk)
         actions.jump(brk);
     else
-        error_at(src, "'break' statement not in loop or switch statement");
+        error_at(src, err_break_not_in_loop_or_switch);
 }
 
 /*
@@ -917,14 +913,14 @@ static void break_stmt(int brk)
 static void continue_stmt(int cnt)
 {
     struct source src = source;
-    
+
     expect(CONTINUE);
     expect(';');
 
     if (cnt)
         actions.jump(cnt);
     else
-        error_at(src, "'continue' statement not in loop statement");
+        error_at(src, err_continue_not_in_loop);
 }
 
 /*
@@ -1048,9 +1044,9 @@ static void parse_initializer_list1(struct desig *, struct init **);
 static struct desig *parse_designator(struct desig *desig)
 {
     struct list *list = NULL;
-    
+
     assert(token_is('.') || token_is('['));
-    
+
     do {
         if (token_is('.')) {
             gettok();
@@ -1099,7 +1095,7 @@ static void parse_initializer1(struct desig **pdesig, struct init **pinit)
             d->src = desig->src;
             d->all = desig;         // all link
         }
-        
+
         parse_initializer_list1(d, pinit);
     } else {
         actions.eleminit(pdesig, parse_assign_expr(), pinit);
@@ -1111,7 +1107,7 @@ static void parse_initializer_list1(struct desig *desig,
 {
     struct desig *d = desig;
     int next = 0;
-    
+
     expect('{');
 
     if (token_is('}')) {
@@ -1201,7 +1197,7 @@ static void attach_type(struct type **typelist, struct type *type)
         struct type *tp = *typelist;
         while (tp && tp->type)
             tp = tp->type;
-        
+
         tp->type = type;
     } else {
         *typelist = type;
@@ -1218,9 +1214,7 @@ static void exit_params(struct symbol *params[])
 {
     assert(params);
     if (params[0] && !params[0]->defined)
-        error_at(params[0]->src,
-                 "a parameter list without types is only allowed "
-                 "in a function definition");
+        error_at(params[0]->src, err_params_without_types);
 
     if (cscope > PARAM)
         exit_scope();
@@ -1409,32 +1403,22 @@ static struct type *parse_specifiers(int *sclass, int *fspec)
         if (*p != 0) {
             if (p == &cls) {
                 if (sclass)
-                    error_at(tok->src,
-                             "duplicate storage class '%t'", tok);
+                    error_at(tok->src, err_duplicate_sclass, tok);
                 else
-                    error_at(tok->src,
-                             "type name does not allow storage class "
-                             "to be specified");
+                    error_at(tok->src, err_sclass_not_allowed);
             } else if (p == &inl) {
                 if (fspec)
-                    warning_at(tok->src,
-                               "duplicate '%t' declaration specifier",
-                               tok);
+                    warning_at(tok->src, err_duplicate_decl_spec, tok);
                 else
-                    error_at(tok->src, "function specifier not allowed");
+                    error_at(tok->src, err_func_spec_not_allowed);
             } else if (p == &cons || p == &res || p == &vol) {
-                warning_at(tok->src,
-                           "duplicate '%t' declaration specifier",
-                           tok);
+                warning_at(tok->src, err_duplicate_decl_spec, tok);
             } else if (p == &ci) {
-                error_at(tok->src,
-                         "duplicate _Complex/_Imaginary specifier '%t'",
-                         tok);
+                error_at(tok->src, err_duplicate_ci_spec, tok);
             } else if (p == &sign) {
-                error_at(tok->src,
-                         "duplicate signed/unsigned speficier '%t'", tok);
+                error_at(tok->src, err_duplicate_sign_spec, tok);
             } else if (p == &type || p == &size) {
-                error_at(tok->src, "duplicate type specifier '%t'", tok);
+                error_at(tok->src, err_duplicate_type_spec, tok);
             } else {
                 CC_UNAVAILABLE();
             }
@@ -1446,7 +1430,7 @@ static struct type *parse_specifiers(int *sclass, int *fspec)
     // default is int
     if (type == 0) {
         if (sign == 0 && size == 0)
-            error("missing type specifier");
+            error(err_missing_type_spec);
         type = INT;
         basety = inttype;
     }
@@ -1455,14 +1439,14 @@ static struct type *parse_specifiers(int *sclass, int *fspec)
         (size == LONG + LONG && type != INT) ||
         (size == LONG && type != INT && type != DOUBLE)) {
         if (size == LONG + LONG)
-            error("%s %s %s is invalid",
+            error(err_invalid_llong_spec,
                   id2s(size/2), id2s(size/2), id2s(type));
         else
-            error("%s %s is invalid", id2s(size), id2s(type));
+            error(err_invalid_size_spec, id2s(size), id2s(type));
     } else if (sign && type != INT && type != CHAR) {
-        error("'%s' cannot be signed or unsigned", id2s(type));
+        error(err_type_cant_be_sign, id2s(type));
     } else if (ci && type != DOUBLE && type != FLOAT) {
-        error("'%s' cannot be %s", id2s(type), id2s(ci));
+        error(err_type_cant_be_ci, id2s(type), id2s(ci));
     }
 
     if (type == CHAR && sign)
@@ -1598,9 +1582,9 @@ static struct symbol **parse_parameters(struct type *ftype)
         params = vtoa(NULL, FUNC);
         TYPE_OLDSTYLE(ftype) = 1;
         if (token_is(ELLIPSIS))
-            error("ISO C requires a named parameter before '...'");
+            error(err_single_ellipsis_param);
         else
-            error("expect parameter declarator at '%t'", token);
+            error(err_expect_param_dector, token);
         gettok();
     }
 
@@ -1636,7 +1620,7 @@ static void parse_array_qualifiers(struct type *atype)
         }
 
         if (*p != 0)
-            warning_at(src, "duplicate type qualifier '%s'", id2s(*p));
+            warning_at(src, err_duplicate_type_qual, id2s(*p));
 
         *p = t;
     }
@@ -1785,7 +1769,7 @@ static struct type *parse_ptr(void)
             break;
 
         if (*p != 0)
-            warning("duplicate type qulifier '%t'", token);
+            warning(err_duplicate_type_qual, token);
 
         *p = t;
 
@@ -1843,7 +1827,7 @@ static void parse_abstract_declarator(struct type **ty)
             prepend_type(ty, faty);
         }
     } else {
-        error("expect '(', '[' or '*'");
+        error(err_expect_abs_dector);
     }
 }
 
@@ -1894,7 +1878,7 @@ static void parse_declarator(struct type **ty,
         }
         *ty = rtype;
     } else {
-        error("expect identifier or '('");
+        error(err_expect_dector);
     }
 }
 
@@ -1902,7 +1886,7 @@ static void parse_declarator(struct type **ty,
 static void parse_param_declarator(struct type **ty, struct token **id)
 {
     assert(ty && id);
-    
+
     if (token_is('*')) {
         struct type *pty = parse_ptr();
         prepend_type(ty, pty);
@@ -1956,9 +1940,9 @@ static void parse_enum_body(struct symbol *sym)
 {
     int val = 0;
     struct list *list = NULL;
-    
+
     if (token_is_not(ID))
-        error("expect identifier");
+        error(err_expect_identifier);
 
     while (token_is(ID)) {
         const char *id = TOK_ID_STR(token);
@@ -2000,7 +1984,7 @@ static void parse_enum_body(struct symbol *sym)
    declarator[opt] ':' constant-expression
 */
 static void parse_struct_body(struct symbol *sym)
-{    
+{
     while (first_decl(token)) {
         struct type *basety = parse_specifiers(NULL, NULL);
 
@@ -2091,14 +2075,13 @@ static struct type *parse_tag_decl(void)
         sym = lookup(id, tags);
         if (sym) {
             if (is_current_scope(sym) && TYPE_OP(sym->type) != t)
-                error_at(src, "use of '%s' with tag type that does "
-                         "not match previous declaration '%T' at %S",
+                error_at(src, err_tag_type_not_match,
                          id2s(t), sym->type, sym->src);
         } else {
             sym = tag_symbol(t, id, src);
         }
     } else {
-        error("expected identifier or '{'");
+        error(err_expect_tag_decl);
         sym = tag_symbol(t, NULL, src);
     }
 
@@ -2177,12 +2160,11 @@ static void parse_decls(decl_fp dcl)
 
                 if (token_is('=')) {
                     if (level == PARAM) {
-                        error("C does not support default arguments");
+                        error(err_cant_init_param);
                         gettok();
                         parse_initializer(NULL);
                     } else if (sclass == TYPEDEF) {
-                        error("illegal initializer "
-                              "(only variable can be initialized)");
+                        error(err_cant_init_typedef);
                         gettok();
                         parse_initializer(NULL);
                     } else {
@@ -2211,7 +2193,7 @@ static void parse_decls(decl_fp dcl)
         // struct/union/enum
         actions.tagdcl(basety, sclass, fspec, source);
     } else {
-        error("invalid token '%t' in declaration", token);
+        error(err_invalid_token_in_decl, token);
     }
     match(';', skip_to_decl);
 }
@@ -2251,7 +2233,7 @@ void translation_unit(void)
                 // empty declaration
                 gettok();
             } else {
-                error("expect declaration");
+                error(err_expect_decl);
                 skip_to_decl();
             }
         }

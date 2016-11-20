@@ -153,13 +153,16 @@ $(BUILD_DIR)burg/%.o: burg/%.c
 $(BUILD_DIR)%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(CC1_OBJ): $(CC1_INC)
+$(CC1_OBJ): $(CC1_INC) diag
 
 $(LIBUTILS_OBJ): $(LIBUTILS_INC)
 
 $(LIBCPP_OBJ): $(LIBCPP_INC)
 
 $(BURG_OBJ): $(BURG_INC)
+
+diag:: diagmsg.txt tools/diag.py
+	python tools/diag.py diagmsg.txt
 
 config.h:
 	mkdir -p $(BUILD_DIR)libcpp
@@ -181,30 +184,30 @@ endif
 #
 # Bootstrap
 #
-stage1:
-	$(MAKE) objclean
-	$(MAKE) CC=cc STAGE=1
-	mv 9cc stage1
-	mv cc1 cc1_stage1
-	ln -s cc1_stage1 cc1
-
-stage2: stage1
-	$(MAKE) objclean
-	$(MAKE) CC=./stage1 STAGE=2
-	mv 9cc stage2
-	mv cc1 cc1_stage2
-	ln -s cc1_stage2 cc1
-
-stage3: stage2
-	$(MAKE) objclean
-	$(MAKE) CC=./stage2 STAGE=3
-	mv 9cc stage3
-	mv cc1 cc1_stage3
-	ln -s cc1_stage3 cc1
-
-bootstrap: stage3
-	cmp stage2 stage3
-	cmp cc1_stage2 cc1_stage3
+# stage1:
+# 	$(MAKE) objclean
+# 	$(MAKE) CC=cc STAGE=1
+# 	mv 9cc stage1
+# 	mv cc1 cc1_stage1
+# 	ln -s cc1_stage1 cc1
+#
+# stage2: stage1
+# 	$(MAKE) objclean
+# 	$(MAKE) CC=./stage1 STAGE=2
+# 	mv 9cc stage2
+# 	mv cc1 cc1_stage2
+# 	ln -s cc1_stage2 cc1
+#
+# stage3: stage2
+# 	$(MAKE) objclean
+# 	$(MAKE) CC=./stage2 STAGE=3
+# 	mv 9cc stage3
+# 	mv cc1 cc1_stage3
+# 	ln -s cc1_stage3 cc1
+#
+# bootstrap: stage3
+# 	cmp stage2 stage3
+# 	cmp cc1_stage2 cc1_stage3
 
 install:: config.h  $(9CC) $(CC1)
 	cp $(9CC) $(INSTALL_BIN_DIR)
@@ -228,3 +231,4 @@ objclean::
 clean:: objclean
 	@rm -rf $(BUILD_DIR)
 	@rm -f config.h
+	@rm -f diagmsg.h

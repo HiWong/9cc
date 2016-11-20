@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #-*- coding: utf-8 -*-
 
-# generates diag.h and diag.c from diagmsg.txt.
+# generates diagmsg.h from diagmsg.txt.
 
 import os
 import sys
@@ -21,22 +21,10 @@ def gen_diagmsg_h(objs):
         f.write("// Don't touch this file.\n")
         f.write("#ifndef DIAGMSG_H\n")
         f.write("#define DIAGMSG_H\n")
-        f.write("enum {\n")
         for obj in objs:
-            f.write("\t" + obj.name + ",\n")
-        f.write("};\n")
-        f.write("extern const char *diagmsgs[];\n")
+            f.write("#define " + obj.name + "  \\\n")
+            f.write("\t" + obj.msg + "\n")
         f.write("#endif /* DIAGMSG_H */\n")
-
-
-def gen_diagmsg_c(objs):
-    with open("diagmsg.c", 'w') as f:
-        f.write("// diagnostic messages\n")
-        f.write("const char *diagmsgs[] = {\n")
-        for obj in objs:
-            f.write("\t" + "/* " + obj.name + " */\n")
-            f.write("\t" + obj.msg + ",\n")
-        f.write("};\n")
 
 
 def parse_diagmsg(c):
@@ -57,7 +45,6 @@ def parse_diagmsg(c):
         objs.append(obj)
 
     gen_diagmsg_h(objs)
-    gen_diagmsg_c(objs)
 
 
 def main():

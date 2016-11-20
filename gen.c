@@ -25,22 +25,22 @@ struct symbol *mksreg(const char *name)
 
 static void rewrite(void)
 {
-    
+
 }
 
 void gen(struct symbol *s)
 {
-    
+
 }
 
 void emit(struct symbol *s)
 {
-    
+
 }
 
 static void geninit_struct(struct symbol *s)
 {
-    // TODO: 
+    // TODO:
 }
 
 static void geninit_array(struct symbol *s)
@@ -53,8 +53,7 @@ static void geninit_array(struct symbol *s)
     if (isstring(ty) && issliteral(init)) {
         IR->defstring(init->s.sym->name, size);
     } else {
-        error_at(s->src, "illegal %s initializer for '%s'",
-                 TYPE_NAME(ty), s->name);
+        error_at(s->src, err_illegal_initializer, s->name);
         IR->defzero(size);
     }
 }
@@ -79,7 +78,7 @@ static void geninit_ptr(struct symbol *s)
                        -init->kids[1]->s.value.i);
     } else {
         if (debug['v'])
-            intal_at(s->src, "illegal initializer for '%s'", s->name);
+            intal_at(s->src, err_illegal_initializer, s->name);
         IR->defzero(TYPE_SIZE(s->type));
     }
 }
@@ -92,7 +91,7 @@ static void geninit_arith(struct symbol *s)
         IR->defconst(OPTYPE(init->op), TYPE_SIZE(s->type), &init->s.value);
     } else {
         if (debug['v'])
-            intal_at(s->src, "illegal initializer for '%s'", s->name);
+            intal_at(s->src, err_illegal_initializer, s->name);
         IR->defzero(TYPE_SIZE(s->type));
     }
 }

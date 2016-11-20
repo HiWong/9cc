@@ -59,5 +59,6 @@ build
 # gprof
 gmon.out
 
-# config.h
+# generated files
 config.h
+diagmsg.h

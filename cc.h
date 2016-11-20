@@ -16,6 +16,7 @@
 #include "libcpp.h"
 #include "gen.h"
 #include "debug.h"
+#include "diagmsg.h"
 
 ///
 /// type declarations

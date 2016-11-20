@@ -1,8 +1,6 @@
 #include <assert.h>
 #include "cc.h"
 
-#define WRN_EXPR_RESULT_NOT_USED  "expression result not used"
-
 static struct tree *root1(struct tree *p, int warn)
 {
     switch (OPKIND(p->op)) {
@@ -72,7 +70,7 @@ static struct tree *root1(struct tree *p, int warn)
     case LT:
     case LE:
         if (warn++ == 0)
-            warning(WRN_EXPR_RESULT_NOT_USED);
+            warning(err_expr_result_discard);
         p = ast_expr(RIGHT, p->type,
                      root1(p->kids[0], warn),
                      root1(p->kids[1], warn));
@@ -88,7 +86,7 @@ static struct tree *root1(struct tree *p, int warn)
     case BNOT:
         // conv
         if (warn++ == 0)
-            warning(WRN_EXPR_RESULT_NOT_USED);
+            warning(err_expr_result_discard);
     case CVI:
     case CVU:
     case CVF:

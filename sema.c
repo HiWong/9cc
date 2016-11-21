@@ -33,6 +33,7 @@ static void dclgvar(struct symbol *s)
 {
     if (opts.ast_dump)
         ast_dump_vardecl(s);
+    IR->defsym(s);
 }
 
 // declare a function
@@ -40,6 +41,7 @@ static void dclfun(struct symbol *s)
 {
     if (opts.ast_dump)
         ast_dump_funcdecl(s);
+    IR->defsym(s);
 }
 
 // declare/define a type: struct/union/enum/typedef

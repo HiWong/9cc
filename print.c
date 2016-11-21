@@ -507,7 +507,7 @@ static const char *qualstr(int q)
 
 static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
 {
-    struct type *ty;
+    struct type *ty, *rty;
     struct type **params;
     int sp;
     char *bp;
@@ -519,7 +519,12 @@ static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
     ty = stack[sp];
     switch (TYPE_KIND(ty)) {
     case POINTER:
-        snprintf(bp, be - bp, "*%s", qualstr(ty->kind));
+        // leading space
+        rty = rtype(ty);
+        if (isptr(rty) || isarray(rty) || isfunc(rty))
+            snprintf(bp, be - bp, "*%s", qualstr(ty->kind));
+        else
+            snprintf(bp, be - bp, " *%s", qualstr(ty->kind));
         *bpp += strlen(bp);
         *spp -= 1;
         break;

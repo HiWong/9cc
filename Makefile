@@ -153,7 +153,7 @@ $(BUILD_DIR)burg/%.o: burg/%.c
 $(BUILD_DIR)%.o: %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-$(CC1_OBJ): $(CC1_INC) diag
+$(CC1_OBJ): $(CC1_INC) diagmsg.h
 
 $(LIBUTILS_OBJ): $(LIBUTILS_INC)
 
@@ -161,7 +161,7 @@ $(LIBCPP_OBJ): $(LIBCPP_INC)
 
 $(BURG_OBJ): $(BURG_INC)
 
-diag:: diagmsg.txt tools/diag.py
+diagmsg.h: diagmsg.txt tools/diag.py
 	python tools/diag.py diagmsg.txt
 
 config.h:

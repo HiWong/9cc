@@ -3320,6 +3320,8 @@ void mark_goto(const char *id, struct source src)
 
 static void init(int argc, char *argv[])
 {
+    if (opts.ast_dump)
+        return;
     IR->init(argc, argv);
 }
 

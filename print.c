@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "cc.h"
 #include "color.h"
 
@@ -482,135 +483,6 @@ void ast_dump_typedecl(struct symbol *n)
 
 /// Convert type node to string.
 
-#define LPAREN  1
-#define RPAREN  2
-#define FCOMMA  3
-#define FSPACE  4
-struct type2s {
-    int id;
-    int qual;
-    struct type *type;
-};
-static struct vector *type2s1(struct type *ty);
-
-static struct type2s *paren(int id, struct type *ty)
-{
-    struct type2s *s = zmalloc(sizeof(struct type2s));
-    s->id = id;
-    s->type = ty;
-    return s;
-}
-
-static void dotype2s(struct vector *l, struct vector *r)
-{
-    struct type2s *s;
-    int k;
-
-    if (vec_empty(l))
-        return;
-
-    s = vec_tail(l);
-    k = TYPE_KIND(s->type);
-    switch (k) {
-    case POINTER:
-        {
-            struct vector *v = vec_new();
-            for (int i = vec_len(l) - 1; i >= 0; i--) {
-                struct type2s *s = vec_at(l, i);
-                if (!isptr(s->type))
-                    break;
-                vec_push(v, s);
-                vec_pop(l);
-            }
-            s = vec_tail(l);
-            if (isfunc(s->type) || isarray(s->type)) {
-                struct type2s *s2 = vec_head(r);
-                bool rfunc = s2 && s2->type && isfunc(s2->type);
-                if (rfunc)
-                    vec_push_front(r,
-                                   paren(LPAREN, s2->type));
-                for (int i = 0; i < vec_len(v); i++)
-                    vec_push_front(r, vec_at(v, i));
-                vec_push_front(r, paren(LPAREN, s->type));
-                vec_push_front(r, paren(FSPACE, NULL));
-                if (rfunc)
-                    vec_push(r, paren(RPAREN, s2->type));
-                vec_push(r, paren(RPAREN, s->type));
-            } else {
-                for (int i = 0; i < vec_len(v); i++)
-                    vec_push_front(r, vec_at(v, i));
-                vec_push_front(r, paren(FSPACE, NULL));
-            }
-        }
-        break;
-    case FUNCTION:
-        {
-            struct type **params = TYPE_PROTO(s->type);
-            size_t len = length(params);
-            vec_push(r, paren(FSPACE, NULL));
-            vec_push(r, paren(LPAREN, s->type));
-            for (size_t i = 0; i < len; i++) {
-                struct type *ty = params[i];
-                struct vector *v = type2s1(ty);
-                vec_add(r, v);
-                if (i < len - 1) {
-                    vec_push(r, paren(FCOMMA, NULL));
-                    vec_push(r, paren(FSPACE, NULL));
-                }
-            }
-            if (TYPE_VARG(s->type)) {
-                vec_push(r, paren(FCOMMA, NULL));
-                vec_push(r, paren(FSPACE, NULL));
-                vec_push(r, paren(ELLIPSIS, NULL));
-            }
-            vec_push(r, paren(RPAREN, s->type));
-            vec_pop(l);
-        }
-        break;
-    case ARRAY:
-        {
-            vec_push(r, s);
-            vec_pop(l);
-        }
-        break;
-    default:
-        {
-            vec_push_front(r, s);
-            vec_pop(l);
-        }
-        break;
-    }
-
-    dotype2s(l, r);
-}
-
-static struct vector *type2s1(struct type *ty)
-{
-    struct vector *l, *r, *v;
-
-    v = vec_new();
-    while (ty) {
-        struct type2s *s = zmalloc(sizeof(struct type2s));
-        if (isqual(ty)) {
-            s->qual = ty->kind;
-            s->type = unqual(ty);
-        } else {
-            s->type = ty;
-        }
-        vec_push(v, s);
-        if (isenum(s->type))
-            ty = NULL;
-        else
-            ty = s->type->type;
-    }
-
-    l = vec_reverse(v);
-    r = vec_new();
-
-    dotype2s(l, r);
-    return r;
-}
-
 static const char *qualstr(int q)
 {
     switch (q) {
@@ -633,50 +505,111 @@ static const char *qualstr(int q)
     }
 }
 
+static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
+{
+    struct type *ty;
+    struct type **params;
+    int sp;
+    char *bp;
+
+    if ((sp = *spp) < 0)
+        return;
+
+    bp = *bpp;
+    ty = stack[sp];
+    switch (TYPE_KIND(ty)) {
+    case POINTER:
+        snprintf(bp, be - bp, "*%s", qualstr(ty->kind));
+        *bpp += strlen(bp);
+        *spp -= 1;
+        break;
+    case FUNCTION:
+        *spp -= 1;
+        if (sp - 1 >= 0 &&
+            (isptr(stack[sp-1]) ||
+             isfunc(stack[sp-1]) ||
+             isarray(stack[sp-1]))) {
+            snprintf(bp, be - bp, " (");
+            bp += strlen(bp);
+            dotype2s(stack, spp, &bp, be);
+            snprintf(bp, be - bp, ")");
+            bp += strlen(bp);
+        }
+        snprintf(bp, be - bp, " (");
+        bp += strlen(bp);
+        params = TYPE_PROTO(ty);
+        for (int i = 0; params[i]; i++) {
+            struct type *pty = params[i];
+            const char *s = type2s(pty);
+            snprintf(bp, be - bp, "%s", s);
+            bp += strlen(bp);
+            if (params[i+1]) {
+                snprintf(bp, be - bp, ", ");
+                bp += strlen(bp);
+            }
+        }
+        if (TYPE_VARG(ty)) {
+            snprintf(bp, be - bp, ", ...");
+            bp += strlen(bp);
+        }
+        snprintf(bp, be - bp, ")");
+        bp += strlen(bp);
+        *bpp = bp;
+        break;
+    case ARRAY:
+        *spp -= 1;
+        if (sp - 1 >= 0 && isptr(stack[sp-1])) {
+            snprintf(bp, be - bp, " (");
+            bp += strlen(bp);
+            dotype2s(stack, spp, &bp, be);
+            snprintf(bp, be - bp, ")");
+            bp += strlen(bp);
+        } else if (sp - 1 >= 0 && isarray(stack[sp-1])) {
+            dotype2s(stack, spp, &bp, be);
+        }
+        if (TYPE_LEN(ty) > 0)
+            snprintf(bp, be - bp, "[%lu]", TYPE_LEN(ty));
+        else
+            snprintf(bp, be - bp, "[]");
+        bp += strlen(bp);
+        *bpp = bp;
+        break;
+    default:
+        snprintf(bp, be - bp, "%s%s", qualstr(ty->kind), TYPE_NAME(ty));
+        if (istag(ty) && !TYPE_TSYM(ty)->anonymous) {
+            bp += strlen(bp);
+            snprintf(bp, be - bp, " %s", TYPE_TSYM(ty)->name);
+        }
+        *spp -= 1;
+        *bpp += strlen(bp);
+        break;
+    }
+    dotype2s(stack, spp, bpp, be);
+}
+
 static const char *type2s(struct type *ty)
 {
     char buf[1024];
-    char *bp = buf, *be = buf + ARRAY_SIZE(buf);
-    int size = ARRAY_SIZE(buf);
-    struct vector *v = type2s1(ty);
-    for (int i = 0; i < vec_len(v); i++) {
-        struct type2s *s = vec_at(v, i);
-        if (s->id == LPAREN) {
-            snprintf(bp, size, "(");
-        } else if (s->id == RPAREN) {
-            snprintf(bp, size, ")");
-        } else if (s->id == FCOMMA) {
-            snprintf(bp, size, ",");
-        } else if (s->id == FSPACE) {
-            snprintf(bp, size, " ");
-        } else if (s->id == ELLIPSIS) {
-            snprintf(bp, size, "...");
-        } else if (isptr(s->type)) {
-            snprintf(bp, size, "*%s", qualstr(s->qual));
-        } else if (isarray(s->type)) {
-            if (TYPE_LEN(s->type) > 0)
-                snprintf(bp, size, "[%lu]", TYPE_LEN(s->type));
-            else
-                snprintf(bp, size, " []");
-        } else if (isenum(s->type) ||
-                   isstruct(s->type) ||
-                   isunion(s->type)) {
-            snprintf(bp, size, "%s%s", qualstr(s->qual), TYPE_NAME(s->type));
-            if (!TYPE_TSYM(s->type)->anonymous) {
-                bp += strlen(bp);
-                size = be - bp;
-                snprintf(bp, size, " %s", TYPE_TSYM(s->type)->name);
-            }
-        } else {
-            snprintf(bp, size, "%s%s", qualstr(s->qual), TYPE_NAME(s->type));
-        }
-        bp += strlen(bp);
-        size = be - bp;
-    }
+    char *bp = buf;
+    unsigned int alloc = 10;
+    struct type **stack = xmalloc(alloc);
+    int sp = -1;
 
+    while (ty) {
+        if (++sp >= alloc) {
+            alloc = alloc * 2 + 1;
+            stack = xrealloc(stack, alloc * sizeof(struct type *));
+        }
+        stack[sp] = ty;
+        if (!(isptr(ty) || isarray(ty) || isfunc(ty)))
+            break;
+        ty = rtype(ty);
+    }
+    *bp = 0;
+    dotype2s(stack, &sp, &bp, bp + ARRAY_SIZE(buf));
+    free(stack);
     return strip(buf);
 }
-// TODO: print typedef names
 
 // for debug
 static const char *desig2s(struct desig *desig)

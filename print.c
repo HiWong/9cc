@@ -507,7 +507,7 @@ static const char *qualstr(int q)
 
 static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
 {
-    struct type *ty, *rty;
+    struct type *ty;
     struct type **params;
     int sp;
     char *bp;
@@ -519,13 +519,7 @@ static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
     ty = stack[sp];
     switch (TYPE_KIND(ty)) {
     case POINTER:
-        // leading space
-        rty = rtype(ty);
-        if (isptr(rty) || isarray(rty) || isfunc(rty))
-            snprintf(bp, be - bp, "*%s", qualstr(ty->kind));
-        else
-            snprintf(bp, be - bp, " *%s", qualstr(ty->kind));
-        *bpp += strlen(bp);
+        snprintf(bp, be - bp, "*%s", qualstr(ty->kind));
         *spp -= 1;
         break;
     case FUNCTION:
@@ -534,7 +528,7 @@ static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
             (isptr(stack[sp-1]) ||
              isfunc(stack[sp-1]) ||
              isarray(stack[sp-1]))) {
-            snprintf(bp, be - bp, " (");
+            snprintf(bp, be - bp, "(");
             bp += strlen(bp);
             dotype2s(stack, spp, &bp, be);
             snprintf(bp, be - bp, ")");
@@ -558,13 +552,11 @@ static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
             bp += strlen(bp);
         }
         snprintf(bp, be - bp, ")");
-        bp += strlen(bp);
-        *bpp = bp;
         break;
     case ARRAY:
         *spp -= 1;
         if (sp - 1 >= 0 && isptr(stack[sp-1])) {
-            snprintf(bp, be - bp, " (");
+            snprintf(bp, be - bp, "(");
             bp += strlen(bp);
             dotype2s(stack, spp, &bp, be);
             snprintf(bp, be - bp, ")");
@@ -576,8 +568,6 @@ static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
             snprintf(bp, be - bp, "[%lu]", TYPE_LEN(ty));
         else
             snprintf(bp, be - bp, "[]");
-        bp += strlen(bp);
-        *bpp = bp;
         break;
     default:
         snprintf(bp, be - bp, "%s%s", qualstr(ty->kind), TYPE_NAME(ty));
@@ -585,10 +575,19 @@ static void dotype2s(struct type **stack, int *spp, char **bpp, char *be)
             bp += strlen(bp);
             snprintf(bp, be - bp, " %s", TYPE_TSYM(ty)->name);
         }
+        // trailing space
+        if (sp - 1 >= 0 &&
+            (isptr(stack[sp-1]) ||
+             isfunc(stack[sp-1]) ||
+             isarray(stack[sp-1]))) {
+            bp += strlen(bp);
+            snprintf(bp, be - bp, " ");
+        }
         *spp -= 1;
-        *bpp += strlen(bp);
         break;
     }
+    bp += strlen(bp);
+    *bpp = bp;
     dotype2s(stack, spp, bpp, be);
 }
 

@@ -772,7 +772,7 @@ argsconv1(struct type **params, size_t nparams, struct tree **args,
         struct type *sty = arg->type;
         arg = assignconv(dty, arg);
         if (arg) {
-            list = list_append(list, arg);
+            list = append(list, arg);
         } else {
             if (oldstyle) {
                 warning_at(src, err_incompat_conv, sty, dty);
@@ -784,7 +784,7 @@ argsconv1(struct type **params, size_t nparams, struct tree **args,
     }
     for (size_t i = ncmp; i < nargs; i++) {
         struct tree *arg = args[i];
-        list = list_append(list, conva(arg));
+        list = append(list, conva(arg));
     }
 
     return ltoa(&list, FUNC);
@@ -2071,17 +2071,17 @@ static struct desig *concat_desig(struct desig *d1, struct desig *d2)
 {
     struct desig *p;
 
-    if (d2->kind == DESIG_NONE)
-        return d1;
+    // if (d2->kind == DESIG_NONE)
+    //     return d1;
 
-    p = d2;
-    while (p->prev->kind != DESIG_NONE) {
-        p->offset += d1->offset;
-        p = p->prev;
-    }
+    // p = d2;
+    // while (p->prev->kind != DESIG_NONE) {
+    //     p->offset += d1->offset;
+    //     p = p->prev;
+    // }
 
-    p->offset += d1->offset;
-    p->prev = copy_desig(d1);
+    // p->offset += d1->offset;
+    // p->prev = copy_desig(d1);
 
     return d2;
 }
@@ -2167,53 +2167,7 @@ static struct desig *next_designator1(struct desig *desig, int next)
 {
     assert(desig);
 
-    switch (desig->kind) {
-    case DESIG_FIELD:
-        {
-            struct desig *prev = desig->prev;
-
-            assert(prev);
-            assert(isrecord(prev->type));
-
-            struct field *field = desig->u.field->link;
-            // skip indirect field
-            while (field && isindirect(field))
-                field = field->link;
-            if (field) {
-                struct desig *d = new_desig_field(field, source);
-                d->offset = prev->offset + field->offset;
-                d->prev = copy_desig(prev);
-                return check_designator(d) ? d : NULL;
-            } else {
-                return next_designator1(prev, ++next);
-            }
-        }
-        break;
-
-    case DESIG_INDEX:
-        {
-            struct desig *prev = desig->prev;
-
-            assert(prev);
-            assert(isarray(prev->type));
-
-            size_t len = TYPE_LEN(prev->type);
-            long idx = desig->u.index;
-            if (len == 0 || idx < len - 1) {
-                struct type *rty = desig->type;
-                struct desig *d = new_desig_index(idx+1, source);
-                d->type = rty;
-                d->offset = desig->offset + TYPE_SIZE(rty);
-                d->prev = copy_desig(prev);
-                return check_designator(d) ? d : NULL;
-            } else {
-                return next_designator1(prev, ++next);
-            }
-        }
-        break;
-
-    case DESIG_NONE:
-        assert(desig->prev == NULL);
+    if (desig->open) {
         if (next) {
             error(err_excess_init, TYPE_NAME(desig->type));
             return NULL;
@@ -2243,10 +2197,47 @@ static struct desig *next_designator1(struct desig *desig, int next)
         } else {
             return desig;
         }
-        break;
     }
 
-    CC_UNAVAILABLE();
+    if (desig->kind == DESIG_FIELD) {
+        struct desig *prev = desig->prev;
+
+        assert(prev);
+        assert(isrecord(prev->type));
+
+        struct field *field = desig->u.field->link;
+        // skip indirect field
+        while (field && isindirect(field))
+            field = field->link;
+        if (field) {
+            struct desig *d = new_desig_field(field, source);
+            d->offset = prev->offset + field->offset;
+            d->prev = copy_desig(prev);
+            return check_designator(d) ? d : NULL;
+        } else {
+            return next_designator1(prev, ++next);
+        }
+    } else if (desig->kind == DESIG_INDEX) {
+        struct desig *prev = desig->prev;
+
+        assert(prev);
+        assert(isarray(prev->type));
+
+        size_t len = TYPE_LEN(prev->type);
+        long idx = desig->u.index;
+        if (len == 0 || idx < len - 1) {
+            struct type *rty = desig->type;
+            struct desig *d = new_desig_index(idx+1, source);
+            d->type = rty;
+            d->offset = desig->offset + TYPE_SIZE(rty);
+            d->prev = copy_desig(prev);
+            return check_designator(d) ? d : NULL;
+        } else {
+            return next_designator1(prev, ++next);
+        }
+    } else {
+        CC_UNAVAILABLE();
+    }
 }
 
 /// actions-init
@@ -2307,70 +2298,61 @@ static struct desig *do_designator(struct desig *desig, struct desig **ds)
 
     for (int i = 0; ds[i]; i++) {
         struct desig *d = ds[i];
-        switch (d->kind) {
-        case DESIG_FIELD:
-            {
-                const char *name = d->u.name;
-                assert(name);
-                if (!isrecord(desig->type)) {
-                    error_at(d->src, err_dismatch_designator_type,
-                             id2s(STRUCT), id2s(STRUCT), desig->type);
-                    return NULL;
-                }
-                struct field *field = find_field(desig->type, name);
-                if (!field) {
-                    field_not_found_error(d->src, desig->type, name);
-                    return NULL;
-                }
-                // indirect
-                if (isindirect(field)) {
-                    for (int i = 0; field->of[i]; i++) {
-                        struct field *p = field->of[i];
-                        struct desig *d = new_desig_field(p, p->src);
-                        d->offset = desig->offset + p->offset;
-                        d->prev = desig;
-                        desig = d;
-                    }
-                    field = direct(field);
-                }
-                d->offset = desig->offset + field->offset;
-                d->type = field->type;
-                d->u.field = field;
-                d->prev = desig;
-                desig = d;
-
-                // check incomplete type
-                if (!check_designator(d))
-                    return NULL;
+        if (d->kind == DESIG_FIELD) {
+            const char *name = d->u.name;
+            assert(name);
+            if (!isrecord(desig->type)) {
+                error_at(d->src, err_dismatch_designator_type,
+                         id2s(STRUCT), id2s(STRUCT), desig->type);
+                return NULL;
             }
-            break;
-
-        case DESIG_INDEX:
-            {
-                if (!isarray(desig->type)) {
-                    error_at(d->src, err_dismatch_designator_type,
-                             id2s(ARRAY), id2s(ARRAY), desig->type);
-                    return NULL;
-                }
-                size_t len = TYPE_LEN(desig->type);
-                if (len && d->u.index >= len) {
-                    error_at(d->src, err_array_designator_overflow,
-                             d->u.index, len);
-                    return NULL;
-                }
-                struct type *rty = rtype(desig->type);
-                d->offset = desig->offset + d->u.index * TYPE_SIZE(rty);
-                d->type = rty;
-                d->prev = desig;
-                desig = d;
-
-                // check incomplete type
-                if (!check_designator(d))
-                    return NULL;
+            struct field *field = find_field(desig->type, name);
+            if (!field) {
+                field_not_found_error(d->src, desig->type, name);
+                return NULL;
             }
-            break;
+            // indirect
+            if (isindirect(field)) {
+                for (int i = 0; field->of[i]; i++) {
+                    struct field *p = field->of[i];
+                    struct desig *d = new_desig_field(p, p->src);
+                    d->offset = desig->offset + p->offset;
+                    d->prev = desig;
+                    desig = d;
+                }
+                field = direct(field);
+            }
+            d->offset = desig->offset + field->offset;
+            d->type = field->type;
+            d->u.field = field;
+            d->prev = desig;
+            desig = d;
 
-        default:
+            // check incomplete type
+            if (!check_designator(d))
+                return NULL;
+        } else if (d->kind == DESIG_INDEX) {
+            if (!isarray(desig->type)) {
+                error_at(d->src, err_dismatch_designator_type,
+                         id2s(ARRAY), id2s(ARRAY), desig->type);
+                return NULL;
+            }
+            size_t len = TYPE_LEN(desig->type);
+            if (len && d->u.index >= len) {
+                error_at(d->src, err_array_designator_overflow,
+                         d->u.index, len);
+                return NULL;
+            }
+            struct type *rty = rtype(desig->type);
+            d->offset = desig->offset + d->u.index * TYPE_SIZE(rty);
+            d->type = rty;
+            d->prev = desig;
+            desig = d;
+
+            // check incomplete type
+            if (!check_designator(d))
+                return NULL;
+        } else {
             assert(0 && "unexpected designator id");
         }
     }
@@ -2826,16 +2808,16 @@ static void do_indirect_field(struct symbol *sym, struct field *field)
         }
         if (isindirect(q)) {
             struct field *n = new_indirect_field(q->indir);
-            struct list *list = list_append(NULL, field);
+            struct list *list = append(NULL, field);
             for (int i = 0; q->of[i]; i++)
-                list = list_append(list, q->of[i]);
+                list = append(list, q->of[i]);
             n->of = ltoa(&list, PERM);
             n->offset = q->offset;
             *indirp = n;
             indirp = &n->link;
         } else if (q->name) {
             struct field *n = new_indirect_field(q);
-            struct list *list = list_append(NULL, field);
+            struct list *list = append(NULL, field);
             n->of = ltoa(&list, PERM);
             n->offset = q->offset;
             *indirp = n;

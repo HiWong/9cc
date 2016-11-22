@@ -342,15 +342,16 @@ static void print_init1(FILE *fp, struct tree *init, int level)
         if (p->desig->kind == DESIG_FIELD &&
             p->desig->u.field->isbit)
             fprint(fp, "<"
-                   GREEN("offset=%lu, boff=%lu, bsize=%lu, type='%T'")
+                   GREEN("%D: offset=%lu, boff=%lu, bsize=%lu, type='%T'")
                    ">\n",
+                   p->desig,
                    p->desig->offset,
                    p->desig->u.field->bitoff,
                    p->desig->u.field->bitsize,
                    p->desig->type);
         else
-            fprint(fp, "<" GREEN("offset=%lu, type='%T'") ">\n",
-                   p->desig->offset, p->desig->type);;
+            fprint(fp, "<" GREEN("%D: offset=%lu, type='%T'") ">\n",
+                   p->desig, p->desig->offset, p->desig->type);;
 
         if (p->body)
             print_expr1(fp, p->body, level + 1);
@@ -596,7 +597,7 @@ static const char *type2s(struct type *ty)
     char buf[1024];
     char *bp = buf;
     unsigned int alloc = 10;
-    struct type **stack = xmalloc(alloc);
+    struct type **stack = xmalloc(alloc * sizeof(struct type *));
     int sp = -1;
 
     while (ty) {
@@ -615,38 +616,34 @@ static const char *type2s(struct type *ty)
     return strip(buf);
 }
 
-// for debug
 static const char *desig2s(struct desig *desig)
 {
-    const char *s = "";
+    char buf[1024];
+    char *bp = buf;
+    char *be = bp + ARRAY_SIZE(buf);
+    unsigned int alloc = 10;
+    struct desig **stack = xmalloc(alloc * sizeof(struct desig *));
+    int sp = -1;
     
-    assert(desig);
-
-    for (struct desig *d = desig; d;) {
-        switch (d->kind) {
-        case DESIG_NONE:
-            assert(d->prev == NULL);
-            if (d->all) {
-                d = d->all;
-                continue;
-            } else {
-                s = format("<%s>%s", type2s(d->type), s);
-            }
-            break;
-
-        case DESIG_FIELD:
-            s = format(".%s%s", d->u.field->name, s);
-            break;
-
-        case DESIG_INDEX:
-            s = format("[%ld]%s", d->u.index, s);
-            break;
-
-        default:
-            assert(0 && "unknown designator type");
+    while (desig) {
+        if (++sp >= alloc) {
+            alloc = alloc * 2 + 1;
+            stack = xrealloc(stack, alloc * sizeof(struct desig *));
         }
-        d = d->prev;
+        stack[sp] = desig;
+        desig = desig->prev;
     }
-    
-    return s;
+    *bp = 0;
+    for (int i = sp; i >= 0; i--) {
+        struct desig *d = stack[i];
+        if (d->kind == DESIG_FIELD) {
+            snprintf(bp, be - bp, ".%s", d->u.field->name);
+            bp += strlen(bp);
+        } else if (d->kind == DESIG_INDEX) {
+            snprintf(bp, be - bp, "[%ld]", d->u.index);
+            bp += strlen(bp);
+        }
+    }
+    free(stack);
+    return strdup(buf);
 }

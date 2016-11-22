@@ -123,7 +123,7 @@ static struct tree **parse_argument_expr_list(void)
         for (;;) {
             struct tree *assign = parse_assign_expr();
             if (assign)
-                l = list_append(l, assign);
+                l = append(l, assign);
 
             if (token_is_not(','))
                 break;
@@ -1054,22 +1054,21 @@ static struct desig *parse_designator(struct desig *desig)
             // only create list item when desig != NULL
             if (desig) {
                 if (token_is(ID))
-                    list = list_append(list,
-                                       new_desig_name(TOK_ID_STR(token),
-                                                      src));
+                    list = append(list,
+                                  new_desig_name(TOK_ID_STR(token), src));
                 else
                     // set desig to NULL
                     desig = NULL;
             }
             expect(ID);
         } else {
-            expect('[');
+            gettok();
             struct source src = source;
             long index = parse_intexpr();
             match(']', skip_to_squarebracket);
             // only create list item when desig != NULL
             if (desig)
-                list = list_append(list, new_desig_index(index, src));
+                list = append(list, new_desig_index(index, src));
         }
     } while (token_is('.') || token_is('['));
 
@@ -1083,20 +1082,13 @@ static void parse_initializer1(struct desig **pdesig, struct init **pinit)
     if (token_is('{')) {
         // begin a new root designator
         struct desig *desig = *pdesig;
-        struct desig *d;
 
-        if (desig->kind == DESIG_NONE) {
-            d = desig;
-            d->braces++;
-        } else {
-            d = new_desig(DESIG_NONE);
-            d->type = desig->type;
-            d->offset = desig->offset;
-            d->src = desig->src;
-            d->all = desig;         // all link
-        }
+        if (desig->open)
+            desig->braces++;
+        else
+            desig->open = true;
 
-        parse_initializer_list1(d, pinit);
+        parse_initializer_list1(desig, pinit);
     } else {
         actions.eleminit(pdesig, parse_assign_expr(), pinit);
     }
@@ -1169,12 +1161,11 @@ static struct tree *parse_initializer_list(struct type *ty)
 {
     if (ty) {
         struct init *ilist = NULL;
-        struct desig *desig = new_desig(DESIG_NONE);
+        struct desig *desig = alloc_desig();
+        desig->open = true;
         desig->type = ty;
         desig->src = source;
-
         parse_initializer_list1(desig, &ilist);
-
         return actions.initlist(ty, ilist);
     } else {
         parse_initializer_list1(NULL, NULL);
@@ -1510,7 +1501,7 @@ static struct symbol **parse_prototype(struct type *ftype)
         sym = actions.paramdcl(id ? TOK_ID_STR(id) : NULL,
                                ty, sclass, fspec, NULL,
                                id ? id->src : src);
-        list = list_append(list, sym);
+        list = append(list, sym);
 
         if (token_is_not(','))
             break;
@@ -1543,7 +1534,7 @@ static struct symbol **parse_oldstyle(struct type *ftype)
 
             sym = actions.paramdcl(name, inttype, 0, 0, NULL, token->src);
             sym->defined = false;
-            params = list_append(params, sym);
+            params = append(params, sym);
         }
         expect(ID);
         if (token_is_not(','))
@@ -1953,7 +1944,7 @@ static void parse_enum_body(struct symbol *sym)
             val = parse_intexpr();
         }
         struct symbol *p = actions.enumid(id, val++, sym, src);
-        list = list_append(list, p);
+        list = append(list, p);
         if (token_is_not(','))
             break;
         gettok();

@@ -49,16 +49,15 @@ int genlabel(int count)
     return lab - count;
 }
 
-struct desig *new_desig(int kind)
+struct desig *alloc_desig(void)
 {
-    struct desig *d = NEWS0(struct desig, FUNC);
-    d->kind = kind;
-    return d;
+    return NEWS0(struct desig, FUNC);
 }
 
 struct desig *new_desig_name(const char *name, struct source src)
 {
-    struct desig *d = new_desig(DESIG_FIELD);
+    struct desig *d = alloc_desig();
+    d->kind = DESIG_FIELD;
     d->u.name = name;
     d->src = src;
     return d;
@@ -66,7 +65,8 @@ struct desig *new_desig_name(const char *name, struct source src)
 
 struct desig *new_desig_index(long index, struct source src)
 {
-    struct desig *d = new_desig(DESIG_INDEX);
+    struct desig *d = alloc_desig();
+    d->kind = DESIG_INDEX;
     d->u.index = index;
     d->src = src;
     return d;
@@ -74,7 +74,8 @@ struct desig *new_desig_index(long index, struct source src)
 
 struct desig *new_desig_field(struct field *field, struct source src)
 {
-    struct desig *d = new_desig(DESIG_FIELD);
+    struct desig *d = alloc_desig();
+    d->kind = DESIG_FIELD;
     d->u.field = field;
     d->type = field->type;
     d->src = src;

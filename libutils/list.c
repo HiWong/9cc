@@ -2,7 +2,7 @@
 
 static struct list *freelists;
 
-struct list *list_append(struct list *list, void *x)
+struct list *append(struct list *list, void *x)
 {
     struct list *new;
 
@@ -21,7 +21,7 @@ struct list *list_append(struct list *list, void *x)
     return new;
 }
 
-size_t list_length(struct list *list)
+size_t listlen(struct list *list)
 {
     size_t n = 0;
 
@@ -38,7 +38,7 @@ size_t list_length(struct list *list)
 void *ltoa(struct list **list, unsigned int area)
 {
     int i = 0;
-    void **array = newarray(sizeof(array[0]), list_length(*list) + 1, area);
+    void **array = newarray(sizeof(array[0]), listlen(*list) + 1, area);
 
     if (*list) {
         struct list *p = *list;

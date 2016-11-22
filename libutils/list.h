@@ -6,9 +6,9 @@ struct list {
     struct list *link;
 };
 
-extern struct list *list_append(struct list *list, void *x);
+extern struct list *append(struct list *list, void *x);
 
-extern size_t list_length(struct list *list);
+extern size_t listlen(struct list *list);
 
 extern void *ltoa(struct list **list, unsigned int area);
 

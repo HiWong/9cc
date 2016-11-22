@@ -1149,11 +1149,11 @@ static struct token *do_get_cc_token(struct file *pfile)
     struct token *t = get_cpp_token(pfile);
     if (t->id == SCONSTANT && peek_cpp_token(pfile)->id == SCONSTANT) {
         struct token *t1;
-        struct list *list = list_append(NULL, t);
+        struct list *list = append(NULL, t);
         size_t len = strlen(TOK_LIT_STR(t));
         do {
             t1 = get_cpp_token(pfile);
-            list = list_append(list, t1);
+            list = append(list, t1);
             len += strlen(TOK_LIT_STR(t1));
         } while (peek_cpp_token(pfile)->id == SCONSTANT);
 

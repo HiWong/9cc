@@ -87,10 +87,10 @@ static void parse_opts(int argc, char *argv[])
             Sflag = true;
         } else if (!strcmp(arg, "-E")) {
             Eflag = true;
-            clist = list_append(clist, arg);
+            clist = append(clist, arg);
         } else if (!strcmp(arg, "-ast-dump")) {
             ast_dump = true;
-            clist = list_append(clist, arg);
+            clist = append(clist, arg);
         } else if (!strcmp(arg, "-Wall") ||
                    !strcmp(arg, "-Werror") ||
                    !strncmp(arg, "-I", 2) ||
@@ -101,19 +101,19 @@ static void parse_opts(int argc, char *argv[])
                    !strncmp(arg, "-O", 2) ||
                    !strcmp(arg, "-ansi") ||
                    !strncmp(arg, "-debug", 6)) {
-            clist = list_append(clist, arg);
+            clist = append(clist, arg);
         } else if (!strncmp(arg, "-l", 2) ||
                    !strncmp(arg, "-L", 2)) {
-            dlist = list_append(dlist, arg);
+            dlist = append(dlist, arg);
         } else if (arg[0] == '-') {
             error("unknown option: %s", arg);
         } else {
-            ilist = list_append(ilist, arg);
+            ilist = append(ilist, arg);
         }
     }
 
 #ifdef CONFIG_DARWIN
-    clist = list_append(clist, "-fleading_underscore");
+    clist = append(clist, "-fleading_underscore");
 #endif
 
     inputs = ltoa(&ilist, PERM);
@@ -176,14 +176,14 @@ static int lnk(char *ifiles[], char *ofile, char *options[])
 
 static int assemble(char *ifile, char *ofile)
 {
-    struct list *ilist = list_append(NULL, ifile);
+    struct list *ilist = append(NULL, ifile);
     char **ifiles = ltoa(&ilist, PERM);
     return proc(as[0], compose(as, ifiles, ofile, NULL));
 }
 
 static int translate(char *ifile, char *ofile, char *options[])
 {
-    struct list *ilist = list_append(NULL, ifile);
+    struct list *ilist = append(NULL, ifile);
     char **ifiles = ltoa(&ilist, PERM);
     cc[3] = ofile ? "-o" : NULL;
     return proc(cc[0], compose(cc, ifiles, ofile, options));
@@ -254,16 +254,16 @@ int main(int argc, char **argv)
             if (suffix && !strcmp(suffix, "s")) {
                 ofile = tempname(tmpdir, resuffix(ifile, "o"));
                 r = assemble(ifile, ofile);
-                objects = list_append(objects, ifile);
+                objects = append(objects, ifile);
             } else if (suffix && !strcmp(suffix, "c")) {
                 char *sfile = tempname(tmpdir, resuffix(ifile, "s"));
                 if ((r = translate(ifile, sfile, cc_options)) == 0) {
                     ofile = tempname(tmpdir, resuffix(ifile, "o"));
                     r = assemble(sfile, ofile);
-                    objects = list_append(objects, ifile);
+                    objects = append(objects, ifile);
                 }
             } else {
-                objects = list_append(objects, ifile);
+                objects = append(objects, ifile);
             }
         }
         if (r == EXIT_FAILURE) {

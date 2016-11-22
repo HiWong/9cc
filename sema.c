@@ -178,6 +178,7 @@ static struct symbol *mktmp(struct type *ty, int sclass)
     sym->type = ty;
     sym->sclass = sclass;
     sym->defined = true;
+    IR->defsym(sym);
 
     return sym;
 }
@@ -2071,17 +2072,18 @@ static struct desig *concat_desig(struct desig *d1, struct desig *d2)
 {
     struct desig *p;
 
-    // if (d2->kind == DESIG_NONE)
-    //     return d1;
+    // zinit
+    if (d2->open)
+        return d1;
 
-    // p = d2;
-    // while (p->prev->kind != DESIG_NONE) {
-    //     p->offset += d1->offset;
-    //     p = p->prev;
-    // }
+    p = d2;
+    while (!p->prev->open) {
+        p->offset += d1->offset;
+        p = p->prev;
+    }
 
-    // p->offset += d1->offset;
-    // p->prev = copy_desig(d1);
+    p->offset += d1->offset;
+    p->prev = copy_desig(d1);
 
     return d2;
 }

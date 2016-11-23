@@ -432,8 +432,8 @@ static bool isnullptr(struct tree *n)
     struct type *ty = n->type;
 
     return OPKIND(n->op) == CNST &&
-        ((isint(ty) && n->s.value.i == 0) ||
-         (isptrto(ty, VOID) && n->s.value.p == NULL));
+        ((isint(ty) && n->u.value.i == 0) ||
+         (isptrto(ty, VOID) && n->u.value.p == NULL));
 }
 
 /// conversion
@@ -443,8 +443,9 @@ static struct tree *rettype(struct type *ty, struct tree *n)
     struct tree *ret;
 
     ret = ast_expr(n->op, ty, n->kids[0], n->kids[1]);
-    ret->s = n->s;
-
+    ret->paren = n->paren;
+    ret->sym = n->sym;
+    ret->u = n->u;
     return ret;
 }
 
@@ -839,7 +840,7 @@ static struct tree *mkiliteral(struct type *ty, long i)
     struct tree *expr;
 
     expr = ast_expr(mkop(CNST, ty), ty, NULL, NULL);
-    expr->s.value.i = i;
+    expr->u.value.i = i;
     return expr;
 }
 
@@ -851,7 +852,7 @@ arith_literal(struct token *t, struct type * (*cnst) (struct token *))
 
     ty = cnst(t);
     expr = ast_expr(mkop(CNST, ty), ty, NULL, NULL);
-    expr->s.value = token->u.lit.v;
+    expr->u.value = token->u.lit.v;
     return expr;
 }
 
@@ -922,7 +923,7 @@ struct tree *mkref(struct symbol *sym)
     else
         ret = ast_expr(mkop(op, voidptype), ptr_type(ty), NULL, NULL);
 
-    ret->s.sym = sym;
+    ret->sym = sym;
     use(sym);
 
     if (isptr(ret->type))
@@ -963,9 +964,9 @@ static struct tree *condexpr(struct type *ty, struct tree *cond,
     if (OPKIND(cond->op) == CNST) {
         bool b;
         if (OPTYPE(cond->op) == P)
-            b = cond->s.value.p;
+            b = cond->u.value.p;
         else
-            b = cond->s.value.u;
+            b = cond->u.value.u;
         if (b)
             return explicit_cast(ty, then);
         else
@@ -981,7 +982,7 @@ static struct tree *condexpr(struct type *ty, struct tree *cond,
     }
 
     ret = ast_expr(COND, ty, cond, ast_expr(RIGHT, ty, then, els));
-    ret->s.sym = sym;
+    ret->sym = sym;
     return ret;
 }
 
@@ -1016,7 +1017,7 @@ member(struct tree *addr, const char *name, struct source src)
     if (direct(field)->isbit) {
         // bit field
         addr = ast_expr(BFIELD, fty, rvalue(addr), NULL);
-        addr->s.u.field = field;
+        addr->u.field = field;
     } else if (!isarray(fty)) {
         addr = rvalue(addr);
     }
@@ -1303,7 +1304,7 @@ do_assign(int t, struct tree *l, struct tree *r, struct source src)
     }
 
     if (l->op == BFIELD) {
-        int n = 8 * TYPE_SIZE(l->s.u.field->type) - l->s.u.field->bitsize;
+        int n = 8 * TYPE_SIZE(l->u.field->type) - l->u.field->bitsize;
         r = actions.bop(RSHIFT,
                         actions.bop(LSHIFT, r, cnsti(n, inttype), src),
                         cnsti(n, inttype),
@@ -1530,7 +1531,7 @@ static struct tree *do_address(struct tree *expr, struct source src)
     else
         expr = lvalue(expr);
 
-    if (isaddrop(expr->op) && expr->s.sym->sclass == REGISTER) {
+    if (isaddrop(expr->op) && expr->sym->sclass == REGISTER) {
         error_at(src, err_take_addr_of_register);
         return NULL;
     }
@@ -1653,11 +1654,11 @@ do_funcall(struct tree *expr, struct tree **args, struct source src)
         sym = mktmp(rty, 0);
         ref = mkref(sym);
         call = ast_expr(mkop(CALL, rty), rty, expr, addrof(ref));
-        call->s.u.args = args;
+        call->u.args = args;
         ret = ast_expr(RIGHT, rty, call, ref);
     } else {
         ret = ast_expr(CALL, rty, expr, NULL);
-        ret->s.u.args = args;
+        ret->u.args = args;
     }
 
     events(funcall)(fty, args);
@@ -1777,7 +1778,7 @@ static struct tree *do_id(struct token *tok)
 
 static struct tree *do_paren(struct tree *expr, struct source src)
 {
-    expr->s.paren = true;
+    expr->paren = true;
     return expr;
 }
 
@@ -1799,7 +1800,7 @@ static long do_intexpr(struct tree *cond, struct type *ty,
         error_at(src, err_expr_not_compile_time_constant);
         return 0;
     }
-    return cond->s.value.i;
+    return cond->u.value.i;
 }
 
 // if/do/while/for
@@ -1808,7 +1809,7 @@ static struct tree *do_boolexpr(struct tree *expr, struct source src)
     if (!expr)
         return NULL;
     // warning for assignment expression
-    if (OPKIND(expr->op) == ASGN && !expr->s.paren)
+    if (OPKIND(expr->op) == ASGN && !expr->paren)
         warning_at(src, err_using_assign_as_cond_without_paren);
 
     return decay(ltor(expr));
@@ -1941,7 +1942,7 @@ static struct tree *ensure_init_scalar(struct symbol *sym,
     struct type *ty = sym->type;
 
     if (iscpliteral(init)) {
-        struct init *i = COMPOUND_SYM(init)->u.init->s.u.ilist;
+        struct init *i = COMPOUND_SYM(init)->u.init->u.ilist;
         init = i->body;
     }
 
@@ -1992,7 +1993,7 @@ static struct tree *ensure_init_array(struct symbol *sym,
 
     if (isstring(dty) && issliteral(init)) {
         finish_string(dty, init, src);
-        deuse(init->s.sym);
+        deuse(init->sym);
         return init;
     }
 
@@ -2149,7 +2150,7 @@ offset_init(struct desig *desig, struct tree *expr, struct init **ilist)
     //possible: scalar/struct/union
     if (iscpliteral(expr)) {
         struct tree *init = COMPOUND_SYM(expr)->u.init;
-        for (struct init *i = init->s.u.ilist; i; i = i->link) {
+        for (struct init *i = init->u.ilist; i; i = i->link) {
             struct desig *d = concat_desig(desig, i->desig);
             offset_init1(d, i->body, ilist);
         }
@@ -2367,7 +2368,7 @@ static struct tree *do_initlist(struct type *ty, struct init *ilist)
     struct tree *n = ast_expr(INITS, ty, NULL, NULL);
     // TODO: incomplete array type
     // TODO: merge bitfields
-    n->s.u.ilist = ilist;
+    n->u.ilist = ilist;
     return n;
 }
 
@@ -2713,8 +2714,8 @@ do_arrayidx(struct type *atype, struct tree *assign, struct source src)
         TYPE_A_ASSIGN(atype) = assign;
         // try evaluate the length
         if (isiliteral(assign)) {
-            TYPE_LEN(atype) = assign->s.value.i;
-            if (assign->s.value.i < 0) {
+            TYPE_LEN(atype) = assign->u.value.i;
+            if (assign->u.value.i < 0) {
                 error_at(src, err_array_has_negative_size);
                 TYPE_LEN(atype) = 1;
             }

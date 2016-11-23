@@ -51,7 +51,7 @@ static void geninit_array(struct symbol *s)
     size_t size = TYPE_SIZE(ty);
 
     if (isstring(ty) && issliteral(init)) {
-        IR->defstring(init->s.sym->name, size);
+        IR->defstring(init->sym->name, size);
     } else {
         error_at(s->src, err_illegal_initializer, s->name);
         IR->defzero(size);
@@ -63,19 +63,19 @@ static void geninit_ptr(struct symbol *s)
     struct tree *init = s->u.init;
 
     if (OPKIND(init->op) == CNST) {
-        IR->defconst(OPTYPE(init->op), TYPE_SIZE(s->type), &init->s.value);
+        IR->defconst(OPTYPE(init->op), TYPE_SIZE(s->type), &init->u.value);
     } else if (opid(init->op) == ADDRG+P) {
-        IR->defaddress(init->s.sym->x.name, 0);
+        IR->defaddress(init->sym->x.name, 0);
     } else if (opid(init->op) == ADD+P &&
                opid(init->kids[0]->op) == ADDRG+P &&
                OPKIND(init->kids[1]->op) == CNST) {
-        IR->defaddress(init->kids[0]->s.sym->x.name,
-                       init->kids[1]->s.value.i);
+        IR->defaddress(init->kids[0]->sym->x.name,
+                       init->kids[1]->u.value.i);
     } else if (opid(init->op) == SUB+P &&
                opid(init->kids[0]->op) == ADDRG+P &&
                OPKIND(init->kids[1]->op) == CNST) {
-        IR->defaddress(init->kids[0]->s.sym->x.name,
-                       -init->kids[1]->s.value.i);
+        IR->defaddress(init->kids[0]->sym->x.name,
+                       -init->kids[1]->u.value.i);
     } else {
         if (debug['v'])
             intal_at(s->src, err_illegal_initializer, s->name);
@@ -88,7 +88,7 @@ static void geninit_arith(struct symbol *s)
     struct tree *init = s->u.init;
 
     if (OPKIND(init->op) == CNST) {
-        IR->defconst(OPTYPE(init->op), TYPE_SIZE(s->type), &init->s.value);
+        IR->defconst(OPTYPE(init->op), TYPE_SIZE(s->type), &init->u.value);
     } else {
         if (debug['v'])
             intal_at(s->src, err_illegal_initializer, s->name);

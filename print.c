@@ -337,7 +337,7 @@ static void print_symbol(FILE *fp, struct symbol *sym, const char *prefix)
 
 static void print_init1(FILE *fp, struct tree *init, int level)
 {
-    for (struct init *p = init->s.u.ilist; p; p = p->link) {
+    for (struct init *p = init->u.ilist; p; p = p->link) {
         print_level(fp, level);
         if (p->desig->kind == DESIG_FIELD &&
             p->desig->u.field->isbit)
@@ -376,23 +376,23 @@ static void print_expr1(FILE *fp, struct tree *expr, int level)
     fprint(fp, GREEN("'%T' "), expr->type);
 
     if (issliteral(expr)) {
-        fprint(fp, CYAN_BOLD("\"%s\""), expr->s.sym->name);
+        fprint(fp, CYAN_BOLD("\"%s\""), expr->sym->name);
     } else if (isiliteral(expr)) {
         if (TYPE_OP(expr->type) == INT)
-            fprint(fp, RED("%ld"), expr->s.value.i);
+            fprint(fp, RED("%ld"), expr->u.value.i);
         else
-            fprint(fp, RED("%lu"), expr->s.value.u);
+            fprint(fp, RED("%lu"), expr->u.value.u);
     } else if (isfliteral(expr)) {
         if (TYPE_KIND(expr->type) == FLOAT)
-            fprint(fp, RED("%f"), (float)expr->s.value.d);
+            fprint(fp, RED("%f"), (float)expr->u.value.d);
         else if (TYPE_KIND(expr->type) == DOUBLE)
-            fprint(fp, RED("%f"), (double)expr->s.value.d);
+            fprint(fp, RED("%f"), (double)expr->u.value.d);
         else
-            fprint(fp, RED("%Lf"), (long double)expr->s.value.d);
+            fprint(fp, RED("%Lf"), (long double)expr->u.value.d);
     } else if (ispliteral(expr)) {
-        fprint(fp, RED("%p"), expr->s.value.p);
-    } else if (expr->s.sym) {
-        fprint(fp, CYAN_BOLD("%s"), expr->s.sym->name);
+        fprint(fp, RED("%p"), expr->u.value.p);
+    } else if (expr->sym) {
+        fprint(fp, CYAN_BOLD("%s"), expr->sym->name);
     }
 
     fprint(fp, "\n");
@@ -403,7 +403,7 @@ static void print_expr1(FILE *fp, struct tree *expr, int level)
 
     if (OPKIND(expr->op) == CALL)
         // print arguments
-        print_args1(fp, expr->s.u.args, level + 1);
+        print_args1(fp, expr->u.args, level + 1);
     else if (iscpliteral(expr))
         // print compound literal
         print_init1(fp, COMPOUND_SYM(expr)->u.init, level + 1);

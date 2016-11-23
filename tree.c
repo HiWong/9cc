@@ -27,20 +27,20 @@ static struct tree *root1(struct tree *p, int warn)
             struct tree *r = p->kids[1];
             assert(OPKIND(r->op) == RIGHT);
 
-            if (p->s.sym && OPKIND(r->kids[0]->op) == ASGN)
+            if (p->sym && OPKIND(r->kids[0]->op) == ASGN)
                 r->kids[0] = root1(r->kids[0]->kids[1], warn+1);
             else
                 r->kids[0] = root1(r->kids[0], warn+1);
 
-            if (p->s.sym && OPKIND(r->kids[1]->op) == ASGN)
+            if (p->sym && OPKIND(r->kids[1]->op) == ASGN)
                 r->kids[1] = root1(r->kids[1]->kids[1], warn+1);
             else
                 r->kids[1] = root1(r->kids[1], warn+1);
 
             // discard the result
-            if (p->s.sym)
-                deuse(p->s.sym);
-            p->s.sym = NULL;
+            if (p->sym)
+                deuse(p->sym);
+            p->sym = NULL;
             if (r->kids[0] == NULL && r->kids[1] == NULL)
                 return root1(p->kids[0], warn);
             else
@@ -127,7 +127,7 @@ struct tree *addrof(struct tree *expr)
             p = p->kids[1] ? p->kids[1] : p->kids[0];
             continue;
         case COND:
-            p = mkref(p->s.sym);
+            p = mkref(p->sym);
             // fall through
         case INDIR:
         case ASGN:

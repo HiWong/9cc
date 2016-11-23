@@ -175,18 +175,16 @@ struct table {
 // expression tree
 struct tree {
     int op;
+    bool paren;
     struct type *type;
     struct tree *kids[2];
-    struct {
-        bool paren;
-        struct symbol *sym;
-        union {
-            struct tree **args; // for CALL
-            struct init *ilist; // for INITS
-            struct field *field; // for BFIELD
-        } u;
-        union value value;
-    } s;
+    struct symbol *sym;         // ADDR/COND
+    union {
+        struct tree **args;  // for CALL
+        struct init *ilist;  // for INITS
+        struct field *field; // for BFIELD
+        union value value;   // for CNST
+    } u;
     struct {
         void *state;
     } x;
@@ -507,13 +505,13 @@ extern struct desig *copy_desig(struct desig *);
 #define isfliteral(n)  (opid((n)->op) == CNST+F)
 #define ispliteral(n)  (opid((n)->op) == CNST+P)
 #define issliteral(n)  (opid((n)->op) == ADDRG+P && \
-                        (n)->s.sym->string)
+                        (n)->sym->string)
 #define iszinit(n)     ((n)->op == 0)
 // compound literal
 #define iscpliteral(n)  (OPKIND((n)->op) == INDIR && \
                          isaddrop((n)->kids[0]->op) &&  \
-                         (n)->kids[0]->s.sym->compound)
-#define COMPOUND_SYM(n)  ((n)->kids[0]->s.sym)
+                         (n)->kids[0]->sym->compound)
+#define COMPOUND_SYM(n)  ((n)->kids[0]->sym)
 
 // tree.c
 extern struct tree *root(struct tree *);
